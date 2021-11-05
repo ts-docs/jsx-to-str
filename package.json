@@ -4,7 +4,7 @@
   "description": "A typescript transformer which transforms JSX into template literals.",
   "main": "dist/index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "tsc && cd test && ttsc"
   },
   "repository": {
     "type": "git",
