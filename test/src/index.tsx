@@ -1,3 +1,4 @@
+import "jsx-to-str";
 
 type User = { name: string, age: number };
 
@@ -10,6 +11,7 @@ export function UserList(props: { users: Array<User> }) {
         {...props.users.map(user => <li><User {...user} isBad={true}></User></li>)}
     </ul>;
 }
+
 
 console.log(UserList({
     users: [

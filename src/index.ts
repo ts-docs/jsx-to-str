@@ -7,3 +7,5 @@ export default (program: ts.Program): ts.TransformerFactory<ts.Node> => ctx => {
         return visitor(ctx, checker, firstNode) || firstNode;
     };
 };
+
+

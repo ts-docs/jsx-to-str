@@ -2,7 +2,7 @@
   "name": "jsx-to-str",
   "version": "0.0.1",
   "description": "A typescript transformer which transforms JSX into template literals.",
-  "main": "dist/index.ts",
+  "main": "dist/index.js",
   "scripts": {
     "test": "tsc && cd test && ttsc"
   },

@@ -11,6 +11,18 @@ A typescript transformer which transforms JSX into template literal strings **du
 
 ## Usage
 
+In order for this transformer to work, make sure you set the following options in your `tsconfig.json` file:
+
+```json
+"jsx": "react-native",
+```
+
+and also place this at the start of your main file:
+
+```ts
+/// <reference path="path_to_root/node_modules/jsx-to-str/jsx.d.ts" />
+```
+
 You can use this either by using `ttypescript` or `webpack`
 
 ### TTypescript
@@ -27,7 +39,7 @@ You can use this either by using `ttypescript` or `webpack`
 ### Webpack (with ts-loader)
 
 ```js
-const TsxToJs = require("tsx-to-js");
+const TsxToJs = require("tsx-to-str");
 
 options: {
       getCustomTransformers: program => {
@@ -36,7 +48,6 @@ options: {
       }
 }
 ```
-
 
 ## A taste
 
