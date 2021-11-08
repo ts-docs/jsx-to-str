@@ -41,7 +41,7 @@ options: {
 ## A taste
 
 Original:
-```ts
+```tsx
 type User = { name: string, age: number };
 
 function User(props: User) {
