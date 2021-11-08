@@ -5,64 +5,71 @@ export function compileSpreadJSXAttribute(exp: ts.Expression, {factory}: ts.Tran
         factory.createPropertyAccessExpression(
             factory.createCallExpression(
                 factory.createPropertyAccessExpression(
-                    factory.createIdentifier("Object"),
-                    factory.createIdentifier("entries")
+                    factory.createCallExpression(
+                        factory.createPropertyAccessExpression(
+                            factory.createIdentifier("Object"),
+                            factory.createIdentifier("entries")
+                        ),
+                        undefined,
+                        [exp]
+                    ),
+                    factory.createIdentifier("map")
                 ),
                 undefined,
-                [exp]
+                [factory.createArrowFunction(
+                    undefined,
+                    undefined,
+                    [factory.createParameterDeclaration(
+                        undefined,
+                        undefined,
+                        undefined,
+                        factory.createArrayBindingPattern([
+                            factory.createBindingElement(
+                                undefined,
+                                undefined,
+                                factory.createIdentifier("key"),
+                                undefined
+                            ),
+                            factory.createBindingElement(
+                                undefined,
+                                undefined,
+                                factory.createIdentifier("val"),
+                                undefined
+                            )
+                        ]),
+                        undefined,
+                        undefined,
+                        undefined
+                    )],
+                    undefined,
+                    factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
+                    factory.createTemplateExpression(
+                        factory.createTemplateHead(
+                            "",
+                            ""
+                        ),
+                        [
+                            factory.createTemplateSpan(
+                                factory.createIdentifier("key"),
+                                factory.createTemplateMiddle(
+                                    "=\"",
+                                    "=\""
+                                )
+                            ),
+                            factory.createTemplateSpan(
+                                factory.createIdentifier("val"),
+                                factory.createTemplateTail(
+                                    "\"",
+                                    "\""
+                                )
+                            )
+                        ]
+                    )
+                )]
             ),
-            factory.createIdentifier("map")
+            factory.createIdentifier("join")
         ),
         undefined,
-        [factory.createArrowFunction(
-            undefined,
-            undefined,
-            [factory.createParameterDeclaration(
-                undefined,
-                undefined,
-                undefined,
-                factory.createArrayBindingPattern([
-                    factory.createBindingElement(
-                        undefined,
-                        undefined,
-                        factory.createIdentifier("key"),
-                        undefined
-                    ),
-                    factory.createBindingElement(
-                        undefined,
-                        undefined,
-                        factory.createIdentifier("val"),
-                        undefined
-                    )
-                ]),
-                undefined,
-                undefined,
-                undefined
-            )],
-            undefined,
-            factory.createToken(ts.SyntaxKind.EqualsGreaterThanToken),
-            factory.createTemplateExpression(
-                factory.createTemplateHead(
-                    "",
-                    ""
-                ),
-                [
-                    factory.createTemplateSpan(
-                        factory.createIdentifier("key"),
-                        factory.createTemplateMiddle(
-                            "=\"",
-                            "=\""
-                        )
-                    ),
-                    factory.createTemplateSpan(
-                        factory.createIdentifier("val"),
-                        factory.createTemplateTail(
-                            "\"",
-                            "\""
-                        )
-                    )
-                ]
-            )
-        )]
+        [factory.createStringLiteral(" ")]
     );
 }
