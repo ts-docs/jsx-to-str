@@ -1,5 +1,6 @@
 
 import * as ts from "typescript";
+import { compileSpreadJSXAttribute } from "./builders";
 
 export interface SpanReflection {
     expression: ts.Expression,
@@ -17,69 +18,78 @@ function compileJSXAttribute(node: ts.Node) : string | ts.Expression | true {
     else return true;
 }
 
-
-export function transformJSXElement(node: ts.JsxElement) : string | [string, Array<SpanReflection>] {
+export function transformJSXElement(node: ts.JsxElement, ctx: ts.TransformationContext) : [string, Array<SpanReflection>] | string {
     const res: Array<SpanReflection> = [];
-    const elementName = node.openingElement.tagName.getText();
-    let opening = `<${elementName}`;
-    let text = "";
+    const tagName = node.openingElement.tagName.getText();
+    let start = `<${tagName}`;
+    let currentBefore = "";
     for (const attr of node.openingElement.attributes.properties) {
-        if (ts.isJsxAttribute(attr)) {
-            if (!attr.initializer) text += attr.name.text;
+        if (ts.isJsxSpreadAttribute(attr)) {
+            const compiled = compileSpreadJSXAttribute(attr.expression, ctx);
+            if (res.length) res[res.length - 1].after += currentBefore + " ";
+            else start += currentBefore + " ";
+            currentBefore = "";
+            res.push({ expression: compiled, after: "" });
+        } else if (ts.isJsxAttribute(attr)) {
+            if (!attr.initializer) {
+                currentBefore += ` ${attr.name.text}`;
+                continue;
+            }
+            const compiledVal = compileJSXAttribute(attr.initializer);
+            if (compiledVal === true) currentBefore += ` ${attr.name.text}`;
+            else if (typeof compiledVal === "string") currentBefore = ` ${attr.name.text}=${compiledVal}`;
             else {
-                const val = compileJSXAttribute(attr.initializer);
-                if (val === true) text += ` ${attr.name.text}`;
-                else if (typeof val === "string") text += ` ${attr.name}=${val}`;
-                else {
-                    if (res.length) {
-                        res[res.length - 1].after += `${text} ${attr.name.text}=`;
-                        text = "";
-                    }
-                    else opening += ` ${attr.name.text}="`;
-                    res.push({
-                        expression: val,
-                        after: ""
-                    });
-                    text += "\"";
-                }
+                if (res.length) res[res.length - 1].after += `${currentBefore} ${attr.name.text}=`;
+                else start += `${currentBefore} ${attr.name.text}="`;
+                res.push({ expression: compiledVal, after: "" });
+                currentBefore = "\"";
             }
         }
     }
-    if (res.length) res[res.length - 1].after += `${text}>`;
-    else opening += `${text}>`;
+
+    currentBefore += ">";
+    if (res.length) res[res.length - 1].after += currentBefore;
+    else start += currentBefore;
+
+    currentBefore = "";
+
     for (const child of node.children) {
-        if (ts.isJsxText(child)) text += child.text;
+        if (ts.isJsxText(child)) currentBefore += child.text;
         else if (ts.isJsxExpression(child) && child.expression) {
-            if (res.length) {
-                res[res.length - 1].after += text;
-                text = "";
-            }
+            const transformed = visitor(ctx, child.expression);
+            if (!transformed) continue;
+            if (res.length) res[res.length - 1].after += currentBefore;
+            else start += currentBefore;
+            currentBefore = "";
             res.push({
-                expression: child.expression,
+                expression: transformed as ts.Expression,
                 after: ""
             });
         }
         else if (ts.isJsxElement(child)) {
-            const childSpans = transformJSXElement(child);
-            if (typeof childSpans === "string") text += childSpans;
+            const childSpans = transformJSXElement(child, ctx);
+            if (typeof childSpans === "string") currentBefore += childSpans;
             else {
-                if (res.length) res[res.length - 1].after += childSpans[0];
-                else text += childSpans[0];
+                if (res.length) res[res.length - 1].after += currentBefore + childSpans[0];
+                else start = currentBefore + childSpans[0];
+                currentBefore = "";
                 res.push(...childSpans[1]);
             }
         }
     }
-    text += `</${elementName}>`;
-    if (res.length) res[res.length - 1].after += text;
-    else return opening + text;
-    return [opening, res];
+
+    currentBefore += `</${tagName}>`;
+
+    if (res.length) res[res.length - 1].after += currentBefore;
+    else return start + currentBefore;
+
+    return [start, res];
 }
 
 export function createTemplate(node: ts.JsxElement, ctx: ts.TransformationContext) : ts.Node|undefined {
-    const result = transformJSXElement(node);
-    if (typeof result === "string" || !result.length) return ctx.factory.createStringLiteral(node.getText());
+    const result = transformJSXElement(node, ctx);
+    if (typeof result === "string") return ctx.factory.createStringLiteral(result);
     const [headText, spans] = result;
-    console.log(headText, spans);
     const tempSpans: Array<ts.TemplateSpan> = [];
     const head = ctx.factory.createTemplateHead(headText);
     const spansLen = spans.length - 1;
