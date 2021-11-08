@@ -1,19 +1,20 @@
 
-function Test(props: Record<string, unknown>, children: string) {
-    return <div>{children}</div>;
+type User = { name: string, age: number };
+
+function User(props: User & { isBad: boolean }) {
+    return <div>name: {props.name}, age: {props.age}</div>;
 }
 
-const obj = { id: "100" };
-export function test(arg: string, arg2: Array<number>) {
-    return <div className={arg} {...obj}>
-        <p>Hello World, how are ya?</p>
-        <Test name="Test" arg>
-            321<p>{123}</p>
-        </Test>
-        <div>
-            {arg2.filter(el => el % 2 === 0).map(el => <p>{el}</p>).join("")}
-        </div>
-    </div>;
+export function UserList(props: { users: Array<User> }) {
+    return <ul>
+        {...props.users.map(user => <li><User {...user} isBad={true}></User></li>)}
+    </ul>;
 }
 
-console.log(test("Volen", [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]));
+console.log(UserList({
+    users: [
+        { name: "Google", age: 72 },
+        { name: "Yahoo", age: 19 },
+        { name: "Hidden", age: 33 }
+    ]
+}));

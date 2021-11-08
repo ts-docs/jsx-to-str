@@ -65,8 +65,9 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
     for (const child of children) {
         if (ts.isJsxText(child)) currentBefore += child.text;
         else if (ts.isJsxExpression(child) && child.expression) {
-            const transformed = visitor(ctx, checker, child.expression);
+            let transformed = visitor(ctx, checker, child.expression);
             if (!transformed) continue;
+            if (child.dotDotDotToken) transformed = ctx.factory.createCallExpression(ctx.factory.createPropertyAccessExpression(transformed as ts.Expression,ctx.factory.createIdentifier("join")), undefined, [ctx.factory.createStringLiteral("")]);
             if (res.length) res[res.length - 1].after += currentBefore;
             else start += currentBefore;
             currentBefore = "";
@@ -80,7 +81,7 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
             if (typeof childSpans === "string") currentBefore += childSpans;
             else {
                 if (res.length) res[res.length - 1].after += currentBefore + childSpans[0];
-                else start = currentBefore + childSpans[0];
+                else start += currentBefore + childSpans[0];
                 currentBefore = "";
                 res.push(...childSpans[1]);
             }
@@ -96,16 +97,18 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
 }
 
 export function transformFnCall(node: ts.JsxSelfClosingElement|ts.JsxOpeningElement, children: ReadonlyArray<ts.JsxChild>, ctx: ts.TransformationContext, checker: ts.TypeChecker) : ts.Expression {
-    const props: Record<string, ts.Expression> = {};
-
+    const props: Array<[string, ts.Expression]> = [];
+    const assigned: Array<ts.Expression> = [];
     for (const attr of node.attributes.properties) {
-        if (!ts.isJsxAttribute(attr)) continue;
-        if (!attr.initializer) {
-            props[attr.name.text] = attr.name;
-            continue;
+        if (ts.isJsxSpreadAttribute(attr)) assigned.push(attr.expression);
+        else if (ts.isJsxAttribute(attr)) {
+            if (!attr.initializer) {
+                props.push([attr.name.text, attr.name]);
+                continue;
+            }
+            if (ts.isStringLiteral(attr.initializer)) props.push([attr.name.text, attr.initializer]);
+            else if (attr.initializer.expression) props.push([attr.name.text, visitor(ctx, checker, attr.initializer.expression) as ts.Expression]);
         }
-        const compiled = visitor(ctx, checker, attr.initializer);
-        props[attr.name.text] = compiled as ts.Expression;
     }
 
     let currentBefore = "";
@@ -141,7 +144,25 @@ export function transformFnCall(node: ts.JsxSelfClosingElement|ts.JsxOpeningElem
     else start += currentBefore;
 
     const exp = createTemplate(start, res, ctx);
-    const params: Array<ts.Expression> = [ctx.factory.createObjectLiteralExpression(Object.keys(props).map(key => ctx.factory.createPropertyAssignment(ctx.factory.createIdentifier(key), props[key])))];
+    const params: Array<ts.Expression> = [];
+    if (assigned.length) {
+        if (assigned.length === 1 && !props.length) params.push(assigned[0]);
+        else params.push(ctx.factory.createCallExpression(
+            ctx.factory.createPropertyAccessExpression(
+                ctx.factory.createIdentifier("Object"),
+                ctx.factory.createIdentifier("assign")
+            ),
+            undefined,
+            [
+                ctx.factory.createObjectLiteralExpression(
+                    [],
+                    false
+                ),
+                ...assigned,
+                ctx.factory.createObjectLiteralExpression(props.map(([key, value]) => ctx.factory.createPropertyAssignment(ctx.factory.createIdentifier(key), value)))
+            ]
+        ));
+    } else params.push(ctx.factory.createObjectLiteralExpression(props.map(([key, value]) => ctx.factory.createPropertyAssignment(ctx.factory.createIdentifier(key), value))));
     if (exp) params.push(exp);
 
     return ctx.factory.createCallExpression(
