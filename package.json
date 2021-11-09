@@ -1,6 +1,6 @@
 {
   "name": "@ts-docs/jsx-to-str",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A typescript transformer which transforms JSX into template literals.",
   "main": "dist/index.js",
   "scripts": {
