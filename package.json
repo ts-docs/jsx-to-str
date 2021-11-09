@@ -4,7 +4,8 @@
   "description": "A typescript transformer which transforms JSX into template literals.",
   "main": "dist/index.js",
   "scripts": {
-    "test": "tsc && cd test && ttsc"
+    "test": "tsc && cd test && ttsc",
+    "prepublishOnly": "tsc"
   },
   "repository": {
     "type": "git",
