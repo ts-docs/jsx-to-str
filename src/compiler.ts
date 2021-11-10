@@ -104,10 +104,18 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
             else {
                 const reallyCompiled = visitor(ctx, checker, compiledVal);
                 if (!reallyCompiled) continue;
-                if (res.length) res[res.length - 1].after += `${currentBefore} ${attrName}=`;
-                else start += `${currentBefore} ${attrName}="`;
-                res.push({ expression: reallyCompiled as ts.Expression, after: "" });
-                currentBefore = "\"";
+                if (ts.isStringLiteral(reallyCompiled)) currentBefore += ` ${attrName}=${reallyCompiled.getText()}`;
+                else if (ts.isTemplateExpression(reallyCompiled)) {
+                    if (res.length) res[res.length - 1].after += `${currentBefore} ${attrName}="${reallyCompiled.head.text}`;
+                    else start += `${currentBefore} ${attrName}="${reallyCompiled.head.text.trim()}`;
+                    currentBefore = "\"";
+                    res.push(...reallyCompiled.templateSpans.map(span => ({expression: span.expression, after: span.literal.text})));
+                } else {
+                    if (res.length) res[res.length - 1].after += `${currentBefore} ${attrName}="`;
+                    else start += `${currentBefore} ${attrName}="`;
+                    res.push({ expression: reallyCompiled as ts.Expression, after: "" });
+                    currentBefore = "\"";
+                }
             }
         }
     }
