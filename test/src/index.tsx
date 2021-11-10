@@ -15,5 +15,8 @@ console.log(<html>
         <link id="highlightTheme" rel="stylesheet" crossOrigin="anonymous"></link>
     </head>
     <body>
+        <div class={`${"World" + "No"}Hello`}>
+
+        </div>
     </body>
 </html>);

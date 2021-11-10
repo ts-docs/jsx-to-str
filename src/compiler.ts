@@ -108,8 +108,8 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
                 else if (ts.isTemplateExpression(reallyCompiled)) {
                     if (res.length) res[res.length - 1].after += `${currentBefore} ${attrName}="${reallyCompiled.head.text}`;
                     else start += `${currentBefore} ${attrName}="${reallyCompiled.head.text.trim()}`;
-                    currentBefore = "\"";
                     res.push(...reallyCompiled.templateSpans.map(span => ({expression: span.expression, after: span.literal.text})));
+                    currentBefore = "\"";
                 } else {
                     if (res.length) res[res.length - 1].after += `${currentBefore} ${attrName}="`;
                     else start += `${currentBefore} ${attrName}="`;
@@ -127,7 +127,8 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
     currentBefore = "";
 
     const [childStart, transpiledChildren] = transformChildren(children, ctx, checker);
-    start += childStart;
+    if (res.length) res[res.length - 1].after += childStart;
+    else start += childStart;
     res.push(...transpiledChildren);
 
     if (!VOID_ELEMENTS.has(tagName)) currentBefore += `</${tagName}>`;
