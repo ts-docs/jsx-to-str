@@ -36,7 +36,7 @@ You can use this either by using `ttypescript` or `webpack`
 - Add this to your compiler options:
 ```js
         "plugins": [
-            { "transform": "@ts-docs/tsx-to-str" },
+            { "transform": "@ts-docs/jsx-to-str" },
         ]
 ```
 - Run ttypescript: `ttsc`
@@ -44,7 +44,7 @@ You can use this either by using `ttypescript` or `webpack`
 ### Webpack (with ts-loader)
 
 ```js
-const TsxToJs = require("@ts-docs/tsx-to-str");
+const TsxToJs = require("@ts-docs/jsx-to-str");
 
 options: {
       getCustomTransformers: program => {

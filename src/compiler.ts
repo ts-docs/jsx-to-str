@@ -36,7 +36,44 @@ function compileJSXAttribute(node: ts.Node) : string | ts.Expression | true {
     else return true;
 }
 
-export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement|ts.JsxOpeningElement, ctx: ts.TransformationContext, checker: ts.TypeChecker) : [string, Array<SpanReflection>] | string {
+export function transformChildren(children: ReadonlyArray<ts.JsxChild>, ctx: ts.TransformationContext, checker: ts.TypeChecker) : [string, Array<SpanReflection>] {
+    let currentBefore = "";
+    let start = "";
+    const res: Array<SpanReflection> = [];
+
+    for (const child of children) {
+        if (ts.isJsxText(child)) currentBefore += child.text;
+        else if (ts.isJsxExpression(child) && child.expression) {
+            const transformed = visitor(ctx, checker, child.expression);
+            if (!transformed) continue;
+            if (res.length) res[res.length - 1].after += currentBefore;
+            else start += currentBefore;
+            currentBefore = "";
+            res.push({
+                expression: transformed as ts.Expression,
+                after: ""
+            });
+        }
+        else if (isJSXElement(child)) {
+            const childSpans = transformJSXElement(child, ctx, checker);
+            if (typeof childSpans === "string") currentBefore += childSpans;
+            else {
+                if (res.length) res[res.length - 1].after += currentBefore + childSpans[0];
+                else start = currentBefore + childSpans[0];
+                currentBefore = "";
+                res.push(...childSpans[1]);
+            }
+        }
+    }
+    
+    if (res.length) res[res.length - 1].after += currentBefore;
+    else start += currentBefore;
+
+    return [start, res];
+}
+
+export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement|ts.JsxOpeningElement|ts.JsxFragment, ctx: ts.TransformationContext, checker: ts.TypeChecker) : [string, Array<SpanReflection>] | string {
+    if (ts.isJsxFragment(node)) return transformChildren(node.children, ctx, checker);
     let children: ReadonlyArray<ts.JsxChild> = [];
     if (ts.isJsxElement(node)) {
         children = node.children;
@@ -81,31 +118,9 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
 
     currentBefore = "";
 
-    for (const child of children) {
-        if (ts.isJsxText(child)) currentBefore += child.text;
-        else if (ts.isJsxExpression(child) && child.expression) {
-            let transformed = visitor(ctx, checker, child.expression);
-            if (!transformed) continue;
-            if (child.dotDotDotToken) transformed = ctx.factory.createCallExpression(ctx.factory.createPropertyAccessExpression(transformed as ts.Expression,ctx.factory.createIdentifier("join")), undefined, [ctx.factory.createStringLiteral("")]);
-            if (res.length) res[res.length - 1].after += currentBefore;
-            else start += currentBefore;
-            currentBefore = "";
-            res.push({
-                expression: transformed as ts.Expression,
-                after: ""
-            });
-        }
-        else if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) {
-            const childSpans = transformJSXElement(child, ctx, checker);
-            if (typeof childSpans === "string") currentBefore += childSpans;
-            else {
-                if (res.length) res[res.length - 1].after += currentBefore + childSpans[0];
-                else start += currentBefore + childSpans[0];
-                currentBefore = "";
-                res.push(...childSpans[1]);
-            }
-        }
-    }
+    const [childStart, transpiledChildren] = transformChildren(children, ctx, checker);
+    start += childStart;
+    res.push(...transpiledChildren);
 
     if (!VOID_ELEMENTS.has(tagName)) currentBefore += `</${tagName}>`;
 
@@ -130,37 +145,7 @@ export function transformFnCall(node: ts.JsxSelfClosingElement|ts.JsxOpeningElem
         }
     }
 
-    let currentBefore = "";
-    let start = "";
-    const res: Array<SpanReflection> = [];
-
-    for (const child of children) {
-        if (ts.isJsxText(child)) currentBefore += child.text;
-        else if (ts.isJsxExpression(child) && child.expression) {
-            const transformed = visitor(ctx, checker, child.expression);
-            if (!transformed) continue;
-            if (res.length) res[res.length - 1].after += currentBefore;
-            else start += currentBefore;
-            currentBefore = "";
-            res.push({
-                expression: transformed as ts.Expression,
-                after: ""
-            });
-        }
-        else if (ts.isJsxElement(child) || ts.isJsxSelfClosingElement(child)) {
-            const childSpans = transformJSXElement(child, ctx, checker);
-            if (typeof childSpans === "string") currentBefore += childSpans;
-            else {
-                if (res.length) res[res.length - 1].after += currentBefore + childSpans[0];
-                else start = currentBefore + childSpans[0];
-                currentBefore = "";
-                res.push(...childSpans[1]);
-            }
-        }
-    }
-
-    if (res.length) res[res.length - 1].after += currentBefore;
-    else start += currentBefore;
+    const [start, res] = transformChildren(children, ctx, checker);
 
     const exp = createTemplate(start, res, ctx);
     const params: Array<ts.Expression> = [];
@@ -206,11 +191,15 @@ export function createTemplate(headText: string, spans: Array<SpanReflection>, c
 }
 
 export function visitor(ctx: ts.TransformationContext, checker: ts.TypeChecker, node: ts.Node) : ts.Node | undefined {
-    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+    if (isJSXElement(node)) {
         const result = transformJSXElement(node, ctx, checker);
         if (typeof result === "string") return ctx.factory.createStringLiteral(result);
         if (!result[1].length) return ctx.factory.createStringLiteral(result[0]);
         return createTemplate(result[0], result[1], ctx);
     }
     return ts.visitEachChild(node, visitor.bind(undefined, ctx, checker), ctx);
+}
+
+function isJSXElement(node: ts.Node) : node is ts.JsxElement | ts.JsxSelfClosingElement | ts.JsxFragment {
+    return ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node) || ts.isJsxFragment(node);
 }
