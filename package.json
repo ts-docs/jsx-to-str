@@ -1,10 +1,11 @@
 {
-  "name": "jsx-to-str",
-  "version": "0.0.1",
+  "name": "@ts-docs/jsx-to-str",
+  "version": "0.1.4",
   "description": "A typescript transformer which transforms JSX into template literals.",
   "main": "dist/index.js",
   "scripts": {
-    "test": "tsc && cd test && ttsc && node dist/index"
+    "test": "tsc && cd test && ttsc && node dist/index",
+    "prepublishOnly": "tsc"
   },
   "repository": {
     "type": "git",
