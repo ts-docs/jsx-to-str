@@ -171,6 +171,21 @@ export interface JsxHtmlGlobalProps {
     tabIndex?: number;
     title?: string;
     translate?: boolean;
+
+    // These technically aren't global, but whatever
+    onClick?: string;
+    onHover?: string;
+    onFocus?: string;
+    onWheel?: string;
+    onCopy?: string;
+    onCut?: string;
+    onPaste?: string;
+    onKeyDown?: string;
+    onKeyPress?: string;
+    onKeyUp?: string;
+    onBlur?: string;
+    onChange?: string;
+    onSelect?: string;
 }
 
 /**

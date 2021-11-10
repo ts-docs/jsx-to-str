@@ -7,6 +7,24 @@ export interface SpanReflection {
     after: string
 }
 
+const VOID_ELEMENTS = new Set([
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+]);
+
+
 function compileJSXAttribute(node: ts.Node) : string | ts.Expression | true {
     if (ts.isStringLiteral(node)) return node.getText();
     else if (ts.isJsxExpression(node) && node.expression) {
@@ -42,14 +60,15 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
                 currentBefore += ` ${attr.name.text}`;
                 continue;
             }
+            const attrName = attr.name.text.toLowerCase();
             const compiledVal = compileJSXAttribute(attr.initializer);
-            if (compiledVal === true) currentBefore += ` ${attr.name.text}`;
-            else if (typeof compiledVal === "string") currentBefore = ` ${attr.name.text}=${compiledVal}`;
+            if (compiledVal === true) currentBefore += ` ${attrName}`;
+            else if (typeof compiledVal === "string") currentBefore += ` ${attrName}=${compiledVal}`;
             else {
                 const reallyCompiled = visitor(ctx, checker, compiledVal);
                 if (!reallyCompiled) continue;
-                if (res.length) res[res.length - 1].after += `${currentBefore} ${attr.name.text}=`;
-                else start += `${currentBefore} ${attr.name.text}="`;
+                if (res.length) res[res.length - 1].after += `${currentBefore} ${attrName}=`;
+                else start += `${currentBefore} ${attrName}="`;
                 res.push({ expression: reallyCompiled as ts.Expression, after: "" });
                 currentBefore = "\"";
             }
@@ -88,7 +107,7 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
         }
     }
 
-    currentBefore += `</${tagName}>`;
+    if (!VOID_ELEMENTS.has(tagName)) currentBefore += `</${tagName}>`;
 
     if (res.length) res[res.length - 1].after += currentBefore;
     else return start + currentBefore;
