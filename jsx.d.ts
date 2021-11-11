@@ -129,12 +129,7 @@ export type JsxComponent<P> = (props: P) => JsxElement | null | undefined;
 
 export type JsxElement = string;
 
-export type JsxChildren =
-    | JsxElement
-    | number
-    | null
-    | undefined
-    | JsxChildren[];
+export type JsxChildren = string;
 
 /**
  * The common properties that may appear on any HTML element.
@@ -144,7 +139,7 @@ export type JsxChildren =
 export interface JsxHtmlGlobalProps {
     accessKey?: string;
     autocapitalize?: string;
-    children?: JsxChildren;
+    children?: string;
     class?: string;
     contentEditable?: string;
     dir?: string;
@@ -171,6 +166,21 @@ export interface JsxHtmlGlobalProps {
     tabIndex?: number;
     title?: string;
     translate?: boolean;
+
+    // These technically aren't global, but whatever
+    onClick?: string;
+    onHover?: string;
+    onFocus?: string;
+    onWheel?: string;
+    onCopy?: string;
+    onCut?: string;
+    onPaste?: string;
+    onKeyDown?: string;
+    onKeyPress?: string;
+    onKeyUp?: string;
+    onBlur?: string;
+    onChange?: string;
+    onSelect?: string;
 }
 
 /**

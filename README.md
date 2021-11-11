@@ -11,6 +11,11 @@ A typescript transformer which transforms JSX into template literal strings **du
 
 ## Usage
 
+Install:
+```
+npm i --save-dev @ts-docs/jsx-to-str
+```
+
 In order for this transformer to work, make sure you set the following options in your `tsconfig.json` file:
 
 ```json
@@ -20,18 +25,18 @@ In order for this transformer to work, make sure you set the following options i
 and also place this at the start of your main file:
 
 ```ts
-/// <reference path="path_to_root/node_modules/jsx-to-str/jsx.d.ts" />
+/// <reference path="path_to_root/node_modules/@ts-docs/jsx-to-str/jsx.d.ts" />
 ```
 
 You can use this either by using `ttypescript` or `webpack`
 
 ### TTypescript
 
-- Install ttypescript: `npm i -g ttypescript`
+- Install ttypescript: `npm i --save-dev ttypescript`
 - Add this to your compiler options:
 ```js
         "plugins": [
-            { "transform": "tsx-to-str" },
+            { "transform": "@ts-docs/jsx-to-str" },
         ]
 ```
 - Run ttypescript: `ttsc`
@@ -39,7 +44,7 @@ You can use this either by using `ttypescript` or `webpack`
 ### Webpack (with ts-loader)
 
 ```js
-const TsxToJs = require("tsx-to-str");
+const TsxToJs = require("@ts-docs/jsx-to-str");
 
 options: {
       getCustomTransformers: program => {
