@@ -1,6 +1,6 @@
 
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
-/// <reference path="../node_modules/@ts-docs/jsx-to-str/jsx.d.ts" />
+/// <reference path="../node_modules/jsx-to-str/jsx.d.ts" />
 
 function Something(params: {a: number, b: number}, children: string) {
     return <>aaaa{params.a} + {params.b}<>{children}</></>;
@@ -17,7 +17,7 @@ console.log(
         </head>
         <body>
             <div class={`${"World" + "No"}Hello`}>
-
+                {...[1, 2, 3, 4, 5]}
             </div>
         </body>
     </html>

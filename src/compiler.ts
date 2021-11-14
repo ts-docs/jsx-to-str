@@ -44,8 +44,9 @@ export function transformChildren(children: ReadonlyArray<ts.JsxChild>, ctx: ts.
     for (const child of children) {
         if (ts.isJsxText(child)) currentBefore += child.text;
         else if (ts.isJsxExpression(child) && child.expression) {
-            const transformed = visitor(ctx, child.expression);
+            let transformed = visitor(ctx, child.expression);
             if (!transformed) continue;
+            if (child.dotDotDotToken) transformed = ctx.factory.createCallExpression(ctx.factory.createPropertyAccessExpression(transformed as ts.Expression, ctx.factory.createIdentifier("join")), undefined, [ctx.factory.createStringLiteral("")]);
             if (res.length) res[res.length - 1].after += currentBefore;
             else start += currentBefore;
             currentBefore = "";
