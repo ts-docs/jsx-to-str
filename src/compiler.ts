@@ -1,5 +1,6 @@
 
 import * as ts from "typescript";
+import { Config } from ".";
 import { compileSpreadJSXAttribute } from "./builders";
 
 export interface SpanReflection {
@@ -36,15 +37,21 @@ function compileJSXAttribute(node: ts.Node) : string | ts.Expression | true {
     else return true;
 }
 
-export function transformChildren(children: ReadonlyArray<ts.JsxChild>, ctx: ts.TransformationContext) : [string, Array<SpanReflection>] {
+export function transformChildren(children: ReadonlyArray<ts.JsxChild>, ctx: ts.TransformationContext, config: Config) : [string, Array<SpanReflection>] {
     let currentBefore = "";
     let start = "";
     const res: Array<SpanReflection> = [];
 
     for (const child of children) {
-        if (ts.isJsxText(child)) currentBefore += child.text;
+        if (ts.isJsxText(child)) {
+            if (config.trim) {
+                const trimmed = child.text.trim();
+                if (trimmed !== "") currentBefore += child.text;
+            }
+            else currentBefore += child.text;
+        }
         else if (ts.isJsxExpression(child) && child.expression) {
-            let transformed = visitor(ctx, child.expression);
+            let transformed = visitor(ctx, config, child.expression);
             if (!transformed) continue;
             if (child.dotDotDotToken) transformed = ctx.factory.createCallExpression(ctx.factory.createPropertyAccessExpression(transformed as ts.Expression, ctx.factory.createIdentifier("join")), undefined, [ctx.factory.createStringLiteral("")]);
             if (res.length) res[res.length - 1].after += currentBefore;
@@ -56,7 +63,7 @@ export function transformChildren(children: ReadonlyArray<ts.JsxChild>, ctx: ts.
             });
         }
         else if (isJSXElement(child)) {
-            const childSpans = transformJSXElement(child, ctx);
+            const childSpans = transformJSXElement(child, ctx, config);
             if (typeof childSpans === "string") currentBefore += childSpans;
             else {
                 if (res.length) res[res.length - 1].after += currentBefore + childSpans[0];
@@ -73,21 +80,21 @@ export function transformChildren(children: ReadonlyArray<ts.JsxChild>, ctx: ts.
     return [start, res];
 }
 
-export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement|ts.JsxOpeningElement|ts.JsxFragment, ctx: ts.TransformationContext) : [string, Array<SpanReflection>] | string {
-    if (ts.isJsxFragment(node)) return transformChildren(node.children, ctx);
+export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement|ts.JsxOpeningElement|ts.JsxFragment, ctx: ts.TransformationContext, config: Config) : [string, Array<SpanReflection>] | string {
+    if (ts.isJsxFragment(node)) return transformChildren(node.children, ctx, config);
     let children: ReadonlyArray<ts.JsxChild> = [];
     if (ts.isJsxElement(node)) {
         children = node.children;
         node = node.openingElement;
     }
     const tagName = node.tagName.getText();
-    if (tagName[0] === tagName[0].toUpperCase()) return ["", [{expression: transformFnCall(node, children, ctx), after: ""}]];
+    if (tagName[0] === tagName[0].toUpperCase()) return ["", [{expression: transformFnCall(node, children, ctx, config), after: ""}]];
     const res: Array<SpanReflection> = [];
     let start = `<${tagName}`;
     let currentBefore = "";
     for (const attr of node.attributes.properties) {
         if (ts.isJsxSpreadAttribute(attr)) {
-            const compiled = compileSpreadJSXAttribute(visitor(ctx, attr.expression) as ts.Expression, ctx);
+            const compiled = compileSpreadJSXAttribute(visitor(ctx, config, attr.expression) as ts.Expression, ctx);
             if (res.length) res[res.length - 1].after += currentBefore + " ";
             else start += currentBefore + " ";
             currentBefore = "";
@@ -102,7 +109,7 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
             if (compiledVal === true) currentBefore += ` ${attrName}`;
             else if (typeof compiledVal === "string") currentBefore += ` ${attrName}=${compiledVal}`;
             else {
-                const reallyCompiled = visitor(ctx, compiledVal);
+                const reallyCompiled = visitor(ctx, config, compiledVal);
                 if (!reallyCompiled) continue;
                 if (ts.isStringLiteral(reallyCompiled)) currentBefore += ` ${attrName}=${reallyCompiled.getText()}`;
                 else if (ts.isTemplateExpression(reallyCompiled)) {
@@ -126,7 +133,7 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
 
     currentBefore = "";
 
-    const [childStart, transpiledChildren] = transformChildren(children, ctx);
+    const [childStart, transpiledChildren] = transformChildren(children, ctx, config);
     if (res.length) res[res.length - 1].after += childStart;
     else start += childStart;
     res.push(...transpiledChildren);
@@ -139,22 +146,22 @@ export function transformJSXElement(node: ts.JsxElement|ts.JsxSelfClosingElement
     return [start, res];
 }
 
-export function transformFnCall(node: ts.JsxSelfClosingElement|ts.JsxOpeningElement, children: ReadonlyArray<ts.JsxChild>, ctx: ts.TransformationContext) : ts.Expression {
+export function transformFnCall(node: ts.JsxSelfClosingElement|ts.JsxOpeningElement, children: ReadonlyArray<ts.JsxChild>, ctx: ts.TransformationContext, config: Config) : ts.Expression {
     const props: Array<[string, ts.Expression]> = [];
     const assigned: Array<ts.Expression> = [];
     for (const attr of node.attributes.properties) {
-        if (ts.isJsxSpreadAttribute(attr)) assigned.push(visitor(ctx, attr.expression) as ts.Expression);
+        if (ts.isJsxSpreadAttribute(attr)) assigned.push(visitor(ctx, config, attr.expression) as ts.Expression);
         else if (ts.isJsxAttribute(attr)) {
             if (!attr.initializer) {
                 props.push([attr.name.text, attr.name]);
                 continue;
             }
             if (ts.isStringLiteral(attr.initializer)) props.push([attr.name.text, attr.initializer]);
-            else if (attr.initializer.expression) props.push([attr.name.text, visitor(ctx, attr.initializer.expression) as ts.Expression]);
+            else if (attr.initializer.expression) props.push([attr.name.text, visitor(ctx, config, attr.initializer.expression) as ts.Expression]);
         }
     }
 
-    const [start, res] = transformChildren(children, ctx);
+    const [start, res] = transformChildren(children, ctx, config);
 
     const exp = createTemplate(start, res, ctx);
     const params: Array<ts.Expression> = [];
@@ -199,14 +206,14 @@ export function createTemplate(headText: string, spans: Array<SpanReflection>, c
     return ctx.factory.createTemplateExpression(head, tempSpans); 
 }
 
-export function visitor(ctx: ts.TransformationContext, node: ts.Node) : ts.Node | undefined {
+export function visitor(ctx: ts.TransformationContext, config: Config, node: ts.Node) : ts.Node | undefined {
     if (isJSXElement(node)) {
-        const result = transformJSXElement(node, ctx);
+        const result = transformJSXElement(node, ctx, config);
         if (typeof result === "string") return ctx.factory.createStringLiteral(result);
         if (!result[1].length) return ctx.factory.createStringLiteral(result[0]);
         return createTemplate(result[0], result[1], ctx);
     }
-    return ts.visitEachChild(node, visitor.bind(undefined, ctx), ctx);
+    return ts.visitEachChild(node, visitor.bind(undefined, ctx, config), ctx);
 }
 
 function isJSXElement(node: ts.Node) : node is ts.JsxElement | ts.JsxSelfClosingElement | ts.JsxFragment {

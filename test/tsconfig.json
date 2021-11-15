@@ -11,7 +11,7 @@
       "strict": true,
       "experimentalDecorators": true,
       "plugins": [
-        { "transform": "../dist/index.js" }
+        { "transform": "../dist/index.js", "trim": true }
     ]
     },
   }
